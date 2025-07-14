@@ -16,52 +16,57 @@ namespace TestChiCuadrado
         /*Deben agregar los aleatorios solo numeros dentro de -> '/debub/data.txt'     */
         /*Instalar:              Install-Package MathNet.Numerics      */
         static string ruta = "data.txt";
+        static int Ntotal=0;
         static void Main(string[] args)
         {
-            
-            int Ntotal = ContarLineas(ruta);
+
             double alfa = 0.05;
-            double gradosLiberta = 0;
-            double n = Math.Sqrt(Ntotal);
-            double AC = 1/(Ntotal/n);
+
+           
             double[] vector = LeerVector(ruta);
             Array.Sort(vector);
-            double li = vector[0], lf=li+AC;
+
+            
+            double n = Math.Sqrt(Ntotal);
+            double AC = 1.0 / (Ntotal / n);
             double E = Ntotal / n;
-            double sumatoriaEstadistica = 0; double contador = 0;
+
+          
+            double li = vector[0];
+            double lf = li + AC;
+            double sumatoriaEstadistica = 0;
             double verificadorTotalidad = 0;
-   
-            do
+            int gradosLiberta = 0;
+            while ( li < 1.0)
             {
-
-                for (int i = 0; i < vector.Length; i++)
+                int contador = 0;
+                foreach (var dato in vector)
                 {
-                    double dato = vector[i];
                     if (dato >= li && dato < lf)
-                    {
                         contador++;
-                    }
-                    
                 }
-               
-                li = lf;
-                lf = lf + AC;
-                verificadorTotalidad += contador;
-                sumatoriaEstadistica += ((Math.Pow((contador - E), 2)) / E);
-         
-                contador = 0; if (verificadorTotalidad == Ntotal) break;
-                gradosLiberta++;
-                
-            }
-            while (lf<1);
-       
-            if(verificadorTotalidad<Ntotal) sumatoriaEstadistica += ((Math.Pow(((Ntotal-verificadorTotalidad) - E), 2)) / E);
 
+                verificadorTotalidad += contador;
+                sumatoriaEstadistica += Math.Pow(contador - E, 2) / E;
+
+                
+                li = lf;
+                lf += AC;
+                if (verificadorTotalidad == Ntotal) break;
+                gradosLiberta++;
+            }
+          
+            //Si en la tabla estadistica nos falto un número para completar el "Ntotal", entonces, se cálcula.
+            if (verificadorTotalidad < Ntotal)
+            {
+                int resto = Ntotal - (int)verificadorTotalidad;
+                sumatoriaEstadistica += Math.Pow(resto - E, 2) / E;
+            }
 
             double chiCritico = ChiSquared.InvCDF(gradosLiberta, 1 - alfa);
-            
+          
 
-            Console.WriteLine(sumatoriaEstadistica<chiCritico ? "SE ACEPTA":"SE RECHAZA");
+            Console.WriteLine(sumatoriaEstadistica<chiCritico ? "NO SE RECHAZA":"SE RECHAZA");
         }
         static double[] LeerVector(string rutaArchivo)
         {
@@ -78,25 +83,16 @@ namespace TestChiCuadrado
                 {
                     double valor;
                     if (double.TryParse(linea, out valor))
+                    {
                         lista.Add(valor);
-                    else
-                        throw new FormatException($"La línea '{linea}' no es un número válido.");
+                        Ntotal++;
+                    }
+                       
+                    
                 }
             }
             return lista.ToArray();
         }
 
-        static int ContarLineas(string rutaArchivo)
-        {
-            if (string.IsNullOrWhiteSpace(rutaArchivo))
-                throw new ArgumentException("La ruta no puede estar vacía.");
-            if (!File.Exists(rutaArchivo))
-                throw new FileNotFoundException("Archivo no encontrado.", rutaArchivo);
-            int contador = 0;
-            using (var sr = new StreamReader(rutaArchivo))
-                while (sr.ReadLine() != null)
-                    contador++;
-            return contador;
-        }
     }
 }
